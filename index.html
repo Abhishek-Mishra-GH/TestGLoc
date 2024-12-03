@@ -1,19 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe/Unsafe Area Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #status {
+            font-weight: bold;
+            color: green;
+        }
+        #status.unsafe {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-  
-  <script type="text/javascript" charset="utf-8">
-    navigator.geolocation.getCurrentPosition(
-    (position) => console.log("Location granted:", position),
-    (error) => console.error("Location error:", error.message),
-    { enableHighAccuracy: true }
-);
-  </script>
+    <h1>Safe/Unsafe Area Tracker</h1>
+    <p><strong>Current Location:</strong></p>
+    <p>Latitude: <span id="latitude">Fetching...</span></p>
+    <p>Longitude: <span id="longitude">Fetching...</span></p>
+    <p>Status: <span id="status">Unknown</span></p>
+
+    <script>
+        // JavaScript logic (as explained earlier)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth's radius in meters
+            const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
+            const φ1 = toRadians(lat1);
+            const φ2 = toRadians(lat2);
+            const Δφ = toRadians(lat2 - lat1);
+            const Δλ = toRadians(lon2 - lon1);
+
+            const a =
+                Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Distance in meters
+        }
+
+        const areas = [
+            { type: "safe", lat: 23.2851, lon: 77.4200, radius: 500 }, // Example safe area
+            { type: "unsafe", lat: 23.2871, lon: 77.4220, radius: 300 } // Example unsafe area
+        ];
+
+        function checkLocation(lat, lon) {
+            let isSafe = true;
+            const statusElement = document.getElementById("status");
+
+            areas.forEach((area) => {
+                const distance = calculateDistance(lat, lon, area.lat, area.lon);
+                if (distance <= area.radius && area.type === "unsafe") {
+                    console.log("I'm in an unsafe area!");
+                    statusElement.textContent = "Unsafe Area!";
+                    statusElement.classList.add("unsafe");
+                    isSafe = false;
+                }
+            });
+
+            if (isSafe) {
+                console.log("I'm in a safe area!");
+                statusElement.textContent = "Safe Area!";
+                statusElement.classList.remove("unsafe");
+            }
+        }
+
+        function getUserLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        document.getElementById("latitude").textContent = latitude.toFixed(6);
+                        document.getElementById("longitude").textContent = longitude.toFixed(6);
+                        checkLocation(latitude, longitude);
+                    },
+                    (error) => {
+                        console.error("Error fetching location:", error.message);
+                        document.getElementById("status").textContent = "Error fetching location!";
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                console.error("Geolocation is not supported by this browser.");
+                document.getElementById("status").textContent = "Geolocation not supported!";
+            }
+        }
+
+        getUserLocation();
+    </script>
 </body>
 </html>
